@@ -387,6 +387,7 @@ select option{background:var(--gray);}
   .btn-nx{width:100%;text-align:center;}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -657,7 +658,59 @@ function validate1(){
 }
 function nextStep(){if(step===1&&!validate1())return;if(step===3){if(!uploadedFile){document.getElementById('eFile').classList.add('on');return;}finish();return;}step++;renderStep();}
 function prevStep(){if(step>1){step--;renderStep();}}
-function finish(){document.getElementById('cProd').textContent='Escapando de Lugares Tristes';document.getElementById('cTalla').textContent=chosenSize;document.getElementById('cNombre').textContent=document.getElementById('fN').value+' '+document.getElementById('fA').value;document.getElementById('cTotal').textContent='$120.000';closeModal();document.getElementById('landingPage').style.display='none';document.getElementById('confirmPage').classList.add('on');window.scrollTo(0,0);}
+
+// EmailJS init
+emailjs.init('iHX3jyWVdLGkALcrX');
+
+function finish(){
+  // Show loading state
+  const btn = document.getElementById('nextBtn');
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+
+  // Convert comprobante image to base64 for email
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const base64img = e.target.result;
+
+    const params = {
+      producto: 'Escapando de Lugares Tristes',
+      talla: chosenSize,
+      precio: '$120.000',
+      nombre: document.getElementById('fN').value,
+      apellidos: document.getElementById('fA').value,
+      correo: document.getElementById('fE').value,
+      celular: document.getElementById('fC').value,
+      cedula: document.getElementById('fD').value,
+      pais: document.getElementById('fPais').options[document.getElementById('fPais').selectedIndex].text,
+      departamento: document.getElementById('fDep').value,
+      ciudad: document.getElementById('fCity').value,
+      barrio: document.getElementById('fBar').value || '—',
+      direccion: document.getElementById('fDir').value,
+      comprobante: base64img,
+    };
+
+    emailjs.send('service_q3mmuph', 'template_b0kb9ig', params)
+      .then(function(){
+        // Success — show confirm page
+        document.getElementById('cProd').textContent = params.producto;
+        document.getElementById('cTalla').textContent = chosenSize;
+        document.getElementById('cNombre').textContent = params.nombre + ' ' + params.apellidos;
+        document.getElementById('cTotal').textContent = params.precio;
+        closeModal();
+        document.getElementById('landingPage').style.display = 'none';
+        document.getElementById('confirmPage').classList.add('on');
+        window.scrollTo(0,0);
+      })
+      .catch(function(err){
+        console.error('EmailJS error:', err);
+        btn.textContent = 'Finalizar ✓';
+        btn.disabled = false;
+        alert('Hubo un error al enviar. Intenta de nuevo.');
+      });
+  };
+  reader.readAsDataURL(uploadedFile);
+}
 function goHome(){document.getElementById('confirmPage').classList.remove('on');document.getElementById('landingPage').style.display='block';chosenSize=null;uploadedFile=null;step=1;document.querySelectorAll('.sz').forEach(b=>b.classList.remove('on'));window.scrollTo(0,0);}
 function switchImg(el,src){document.getElementById('mainImg').src=src;document.querySelectorAll('.thumb').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
 function loadDeps(){const p=document.getElementById('fPais').value,ds=document.getElementById('fDep'),cs=document.getElementById('fCity');ds.innerHTML='<option value="">— Selecciona</option>';cs.innerHTML='<option value="">— Primero depto.</option>';if(p&&geo[p])Object.keys(geo[p]).forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;ds.appendChild(o);});}
