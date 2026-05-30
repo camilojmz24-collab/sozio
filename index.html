@@ -663,15 +663,21 @@ function prevStep(){if(step>1){step--;renderStep();}}
 emailjs.init('iHX3jyWVdLGkALcrX');
 
 function finish(){
-  // Show loading state
   const btn = document.getElementById('nextBtn');
   btn.textContent = 'Enviando...';
   btn.disabled = true;
 
-  // Convert comprobante image to base64 for email
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const base64img = e.target.result;
+  // Step 1: Upload image to ImgBB, then send email with the link
+  const formData = new FormData();
+  formData.append('image', uploadedFile);
+
+  fetch('https://api.imgbb.com/1/upload?key=e102796f04532953702c9817103a482d', {
+    method: 'POST',
+    body: formData
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(data){
+    const imgUrl = data.data.url;
 
     const params = {
       producto: 'Escapando de Lugares Tristes',
@@ -687,29 +693,28 @@ function finish(){
       ciudad: document.getElementById('fCity').value,
       barrio: document.getElementById('fBar').value || '—',
       direccion: document.getElementById('fDir').value,
-      comprobante: base64img,
+      comprobante: imgUrl,
     };
 
-    emailjs.send('service_yr3wmur', 'template_b0kb9ig', params)
-      .then(function(){
-        // Success — show confirm page
-        document.getElementById('cProd').textContent = params.producto;
-        document.getElementById('cTalla').textContent = chosenSize;
-        document.getElementById('cNombre').textContent = params.nombre + ' ' + params.apellidos;
-        document.getElementById('cTotal').textContent = params.precio;
-        closeModal();
-        document.getElementById('landingPage').style.display = 'none';
-        document.getElementById('confirmPage').classList.add('on');
-        window.scrollTo(0,0);
-      })
-      .catch(function(err){
-        console.error('EmailJS error:', err);
-        btn.textContent = 'Finalizar ✓';
-        btn.disabled = false;
-        alert('Hubo un error al enviar. Intenta de nuevo.');
-      });
-  };
-  reader.readAsDataURL(uploadedFile);
+    // Step 2: Send email via EmailJS with the image URL
+    return emailjs.send('service_yr3wmur', 'template_b0kb9ig', params);
+  })
+  .then(function(){
+    document.getElementById('cProd').textContent = 'Escapando de Lugares Tristes';
+    document.getElementById('cTalla').textContent = chosenSize;
+    document.getElementById('cNombre').textContent = document.getElementById('fN').value + ' ' + document.getElementById('fA').value;
+    document.getElementById('cTotal').textContent = '$120.000';
+    closeModal();
+    document.getElementById('landingPage').style.display = 'none';
+    document.getElementById('confirmPage').classList.add('on');
+    window.scrollTo(0,0);
+  })
+  .catch(function(err){
+    console.error('Error:', err);
+    btn.textContent = 'Finalizar ✓';
+    btn.disabled = false;
+    alert('Hubo un error al enviar. Intenta de nuevo.');
+  });
 }
 function goHome(){document.getElementById('confirmPage').classList.remove('on');document.getElementById('landingPage').style.display='block';chosenSize=null;uploadedFile=null;step=1;document.querySelectorAll('.sz').forEach(b=>b.classList.remove('on'));window.scrollTo(0,0);}
 function switchImg(el,src){document.getElementById('mainImg').src=src;document.querySelectorAll('.thumb').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
