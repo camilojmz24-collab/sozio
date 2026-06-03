@@ -276,40 +276,7 @@ button, a, [onclick], select, input[type=file], .sz, .pthumb, .sdot, .s-prev, .s
   background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);
 }
 
-/* Mobile arcade controls */
-.arcade-mobile-controls{
-  display:none;
-  position:absolute;bottom:0;left:0;right:0;
-  padding:0.8rem 1rem;
-  justify-content:space-between;align-items:center;
-  z-index:4;
-  background:linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-}
-.arcade-dpad{display:flex;gap:0.4rem;}
-.arc-btn{
-  width:52px;height:52px;
-  background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.15);
-  color:rgba(255,255,255,0.7);
-  font-size:1.2rem;
-  display:flex;align-items:center;justify-content:center;
-  border-radius:4px;
-  user-select:none;
-  -webkit-user-select:none;
-  touch-action:manipulation;
-}
-.arc-btn:active{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.4);}
-.arc-fire{
-  width:64px;height:64px;
-  background:rgba(176,42,32,0.3);
-  border:2px solid rgba(192,57,43,0.6);
-  color:#ff3d3d;font-size:1.4rem;
-  display:flex;align-items:center;justify-content:center;
-  border-radius:50%;
-  user-select:none;-webkit-user-select:none;
-  touch-action:manipulation;
-}
-.arc-fire:active{background:rgba(176,42,32,0.6);}
+
 .arcade-logo-img{
   width:min(140px,45vw);margin-bottom:1.5rem;
 }
@@ -317,15 +284,33 @@ button, a, [onclick], select, input[type=file], .sz, .pthumb, .sdot, .s-prev, .s
   width:min(300px,85vw);
 }
 @media(max-width:768px){
-  .arcade-mobile-controls{display:flex;}
-  .arcade-ui{bottom:80px;}
-  .arcade-start{width:90vw;text-align:center;}
-  .arcade-diff{width:92vw;}
-  .arcade-gameover{width:85vw;}
-  .arcade-gameover h2{font-size:1.5rem;}
-  #arcadeScreen canvas{
-    max-height:calc(100vh - 120px);
+  #arcadeScreen{
+    justify-content:flex-start;
+    padding-top:0;
   }
+  #arcadeScreen canvas{
+    width:100vw !important;
+    height:100vh !important;
+    max-height:100vh;
+    display:block;
+  }
+  .arcade-ui{
+    bottom:1.2rem;
+    padding:0 1rem;
+  }
+  .arcade-score, .arcade-lives{
+    font-size:0.65rem;
+  }
+  .arcade-start{width:88vw;text-align:center;}
+  .arcade-logo-img{width:min(120px,38vw);margin-bottom:1.2rem;}
+  .arcade-press{font-size:0.75rem;}
+  .arcade-diff{width:88vw;}
+  .diff-btn{padding:0.6rem 1rem;}
+  .diff-name{font-size:0.8rem;}
+  .arcade-gameover{width:82vw;}
+  .arcade-gameover h2{font-size:1.4rem;}
+  .arcade-gameover p{font-size:0.65rem;}
+  .arcade-btn{font-size:0.7rem;padding:0.6rem 1.2rem;}
 }
 
 /* ══════════════════════════════════
@@ -973,15 +958,6 @@ select option{background:#1a1919;color:var(--white);}
     <button class="arcade-btn" onclick="showDiff()">Bienvenido al infierno</button>
   </div>
 
-  <!-- Mobile controls -->
-  <div class="arcade-mobile-controls" id="mobileControls" style="display:none;">
-    <div class="arcade-dpad">
-      <div class="arc-btn" id="btnLeft" ontouchstart="player&&(player.dx=-player.speed)" ontouchend="player&&(player.dx=0)">←</div>
-      <div class="arc-btn" id="btnRight" ontouchstart="player&&(player.dx=player.speed)" ontouchend="player&&(player.dx=0)">→</div>
-    </div>
-    <div class="arc-fire" ontouchstart="shoot();shootLoop=setInterval(shoot,220);" ontouchend="clearInterval(shootLoop);">🔴</div>
-  </div>
-
   <div class="arcade-ui">
     <div class="arcade-score">SCORE: <span id="scoreDisplay">0</span></div>
     <div class="arcade-lives">♥ <span id="livesDisplay">3</span></div>
@@ -1325,8 +1301,14 @@ var currentDiffName = 'medium';
 
 function initArcade(){
   var canvas=document.getElementById('arcadeCanvas');
-  W=Math.min(window.innerWidth,600);
-  H=Math.min(window.innerHeight,window.innerWidth*1.5,700);
+  var isMobile = window.innerWidth <= 768;
+  if(isMobile){
+    W=window.innerWidth;
+    H=window.innerHeight;
+  } else {
+    W=Math.min(window.innerWidth,600);
+    H=Math.min(window.innerHeight,700);
+  }
   canvas.width=W;canvas.height=H;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
 }
@@ -1352,10 +1334,7 @@ function startGame(){
   document.getElementById('scoreDisplay').textContent=0;
   document.getElementById('livesDisplay').textContent=lives;
   player={x:W/2-26,y:H-72,w:52,h:52,speed:5,dx:0};
-  // Show mobile D-pad on touch devices
-  if('ontouchstart' in window){
-    document.getElementById('mobileControls').style.display='flex';
-  }
+
   bullets=[];enemies=[];particles=[];
   spawnWave();
   cancelAnimationFrame(animFrame);
@@ -1612,7 +1591,7 @@ function enterStore(){
 }
 
 // Controls
-var shooting=false, shootTimer;
+var shooting=false, shootTimer, shootLoop;
 document.addEventListener('keydown',function(e){
   if(!gameStarted&&(e.code==='Space'||e.code==='Enter')){showDiff();return;}
   if(!arcadeRunning)return;
@@ -1624,26 +1603,44 @@ document.addEventListener('keyup',function(e){
   if(e.code==='ArrowLeft'||e.code==='KeyA'||e.code==='ArrowRight'||e.code==='KeyD')player.dx=0;
 });
 
-// Touch controls
-var touchStartX=null;
+// Touch controls — drag to move, tap to shoot
+var touchStartX=null, touchLastX=null, touchMoved=false;
 document.getElementById('arcadeCanvas').addEventListener('touchstart',function(e){
   e.preventDefault();
   if(!gameStarted){showDiff();return;}
   if(!arcadeRunning)return;
   touchStartX=e.touches[0].clientX;
+  touchLastX=e.touches[0].clientX;
+  touchMoved=false;
+  // Auto-shoot while holding
   shoot();
-  shootTimer=setInterval(shoot,300);
+  shootLoop=setInterval(shoot,280);
 },{passive:false});
+
 document.getElementById('arcadeCanvas').addEventListener('touchmove',function(e){
   e.preventDefault();
-  if(!arcadeRunning||touchStartX===null)return;
-  var dx=e.touches[0].clientX-touchStartX;
-  if(player)player.x+=dx*0.6;
-  touchStartX=e.touches[0].clientX;
+  if(!arcadeRunning||touchLastX===null)return;
+  var dx=e.touches[0].clientX - touchLastX;
+  touchLastX=e.touches[0].clientX;
+  touchMoved=true;
+  if(player){
+    // Direct position mapping — finger controls ship position
+    var rect=document.getElementById('arcadeCanvas').getBoundingClientRect();
+    var relX=e.touches[0].clientX - rect.left;
+    var targetX=(relX/rect.width)*W - player.w/2;
+    // Smooth follow
+    player.x += (targetX - player.x) * 0.25;
+    player.x=Math.max(10, Math.min(W-player.w-10, player.x));
+  }
 },{passive:false});
-document.getElementById('arcadeCanvas').addEventListener('touchend',function(){
-  clearInterval(shootTimer);
+
+document.getElementById('arcadeCanvas').addEventListener('touchend',function(e){
+  clearInterval(shootLoop);
+  touchLastX=null;
+  // If barely moved, it was a tap — shoot
+  if(!touchMoved) shoot();
 });
+
 document.getElementById('arcadeCanvas').addEventListener('click',function(){
   if(!gameStarted){showDiff();return;}
   if(arcadeRunning)shoot();
